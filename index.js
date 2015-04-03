@@ -109,3 +109,31 @@ $("#add-pvt-key").on("click", function(evt){
     renderAddress(address)
   })
 }.bind(this))
+
+
+
+/// TODO:
+
+
+// - localstorage
+// - UI (bootcrap?)
+// - sort with detatch
+// - ember state?
+
+// var $people = $('ul.js-people'),
+//   $peopleli = $people.children('li');
+//
+// $peopleli.sort(function(a,b){
+//   var an = a.getAttribute('data-name'),
+//     bn = b.getAttribute('data-name');
+//
+//   if(an > bn) {
+//     return 1;
+//   }
+//   if(an < bn) {
+//     return -1;
+//   }
+//   return 0;
+// });
+//
+// $peopleli.detach().appendTo($people);
