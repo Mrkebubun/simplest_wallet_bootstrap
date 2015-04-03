@@ -1,4 +1,10 @@
-# QuizWallet
+# Simplest Wallet Bitcoin UI
+
+powered by bitcore, zepto.js and handlebars
+
+generate new addresses - shows private keys
+
+next step: save keys into local storage
 
 ### Installation
 
