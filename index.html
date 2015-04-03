@@ -2,10 +2,31 @@
   <head>
     <meta charset="utf-8">
     <title>Bitcore Clientside</title>
+    <style media="screen">
+      .hidden {
+        display: none;
+      }
+    </style>
   </head>
   <body>
-    <script charset="utf-8" type="text/javascript" src="./bundle.js"></script>
+    <!-- main view -->
     hello pvt key
     <div id="pvtKey" />
+
+    <!-- templates -->
+    <script id="address-tpl" type="text/x-handlebars-template">
+      <div class="entry">
+        Address: {{address}}
+        <button id="reveal-pvt-key">
+          Reveal Private Key
+        </button>
+        <div id="privateKey" class="hidden">
+          {{privateKey}}
+        </div>
+      </div>
+    </script>
+    <!-- js -->
+    <script charset="utf-8" type="text/javascript" src="./vendor/zepto.js"></script>
+    <script charset="utf-8" type="text/javascript" src="./bundle.js"></script>
   </body>
 </html>
