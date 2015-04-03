@@ -3,6 +3,9 @@
     <meta charset="utf-8">
     <title>Bitcore Clientside</title>
     <style media="screen">
+      pre {
+        display: inline-block;
+      }
       .hidden {
         display: none;
       }
@@ -10,19 +13,23 @@
   </head>
   <body>
     <!-- main view -->
-    hello pvt key
-    <div id="pvtKey" />
+    <h1>Quizwallet</h1>
+    <div id="app"></div>
+    <button id="add-pvt-key">+ New Private Key</button>
 
     <!-- templates -->
     <script id="address-tpl" type="text/x-handlebars-template">
-      <div class="entry">
-        Address: {{address}}
-        <button id="reveal-pvt-key">
-          Reveal Private Key
-        </button>
-        <div id="privateKey" class="hidden">
-          {{privateKey}}
-        </div>
+      <div class="entry" data-id={{id}}>
+        Address: <pre>{{address}}</pre>
+        {{#if pvtHidden}}
+          <button class="reveal-pvt-key">
+            < o > Reveal Private Key
+          </button>
+        {{else}}
+          <span id="privateKey">
+            - Private key: <pre>{{privateKey}}</pre>
+          </span>
+        {{/if}}
       </div>
     </script>
     <!-- js -->

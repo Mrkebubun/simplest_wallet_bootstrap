@@ -1,6 +1,14 @@
 var bitcore     = require('bitcore')
 var Handlebars  = require('handlebars')
 
+// models (defaults)
+var models = {
+  key: {
+    pvtHidden: true
+  }
+}
+
+
 // store
 var store  = {
   keys: []
@@ -9,7 +17,10 @@ var store  = {
 // bitcore actions - add keypair to store
 var bitcoreActions = {
   addKey: function() {
-    store.keys.push(this._generateKey())
+    var key = models.key
+    key.id = store.keys.length
+    key = $.extend(this._generateKey(), key)
+    store.keys.push(key)
   },
 
   _generateKey: function() {
@@ -57,7 +68,8 @@ var renderAddress = function(address) {
   var html = templates.all.address(address)
   var div = document.createElement("div");
   div.innerHTML = html
-  document.querySelector("body").appendChild(div)
+  document.querySelector("#app").appendChild(div)
+  // $("#app").prepend(div)
 }
 
 
@@ -68,7 +80,32 @@ store.keys.forEach(function(address){
 
 
 // handlers
+$("#app").on("click", ".reveal-pvt-key", function(evt){
+  var parent  = $(evt.target).parent().get(0)
+  console.log(parent)
+  var id      = parseInt(parent.dataset.id)
+  // id = store.keys.length - id // because we're prepending - but it's hard :D
+  var key = store.keys[id]
 
-$("#reveal-pvt-key").on("click", function(evt){
-  console.log(evt.target)
+  // with ember
+  // key.set('pvtHidden', false)
+
+  // without ember
+  var klass = parent.className
+  // console.log(id)
+  key.pvtHidden = false
+  key.id = store.keys.length
+  renderAddress(key)
+  document.querySelectorAll("."+klass)[id].className = "entry hidden"
 })
+
+
+$("#add-pvt-key").on("click", function(evt){
+  bitcoreActions.addKey()
+  var key = $(store.keys).last()
+
+  $("#app").html('')
+  store.keys.forEach(function(address){
+    renderAddress(address)
+  })
+}.bind(this))
