@@ -39,3 +39,16 @@ firefox index.html
 ```
 
 and open the console
+
+
+### Developing
+
+build sass assets
+
+```rb
+bundle install
+# will install guard
+
+guard
+# to watch the sass files and generate the main css
+```

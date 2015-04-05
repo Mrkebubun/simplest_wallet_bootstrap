@@ -61,28 +61,29 @@ var templates = {
 var templateNames = ["address"]
 templates.init(templateNames)
 
-
+var mainView = "#app .entries"
 
 // rendering
-var renderAddress = function(address) {
+var renderAddress = function(address, view) {
   var html = templates.all.address(address)
   var div = document.createElement("div");
   div.innerHTML = html
-  document.querySelector("#app").appendChild(div)
+  document.querySelector(view).appendChild(div)
   // $("#app").prepend(div)
 }
 
 
 // store render
 store.keys.forEach(function(address){
-  renderAddress(address)
+  renderAddress(address, mainView)
 })
 
 
 // handlers
 $("#app").on("click", ".reveal-pvt-key", function(evt){
-  var parent  = $(evt.target).parent().get(0)
-  console.log(parent)
+  console.log(evt.target)
+  var parent  = $(evt.target).parents(".entry").get(0)
+  console.log("parent", parent)
   var id      = parseInt(parent.dataset.id)
   // id = store.keys.length - id // because we're prepending - but it's hard :D
   var key = store.keys[id]
@@ -91,12 +92,13 @@ $("#app").on("click", ".reveal-pvt-key", function(evt){
   // key.set('pvtHidden', false)
 
   // without ember
-  var klass = parent.className
+  var klass = $(parent).attr("class").split(" ").join(".")
   // console.log(id)
   key.pvtHidden = false
   key.id = store.keys.length
-  renderAddress(key)
-  document.querySelectorAll("."+klass)[id].className = "entry hidden"
+  renderAddress(key, mainView)
+  var elem = document.querySelectorAll("."+klass)[id]
+  elem.className = "list-group-item entry hidden"
 })
 
 
@@ -104,9 +106,9 @@ $("#add-pvt-key").on("click", function(evt){
   bitcoreActions.addKey()
   var key = $(store.keys).last()
 
-  $("#app").html('')
+  $(mainView).html('')
   store.keys.forEach(function(address){
-    renderAddress(address)
+    renderAddress(address, mainView)
   })
 }.bind(this))
 

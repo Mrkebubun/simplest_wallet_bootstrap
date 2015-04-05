@@ -2,36 +2,79 @@
   <head>
     <meta charset="utf-8">
     <title>Bitcoin Clientside Simplest Wallet</title>
-    <style media="screen">
-      pre {
-        display: inline-block;
-      }
-      .hidden {
-        display: none;
-      }
-    </style>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="./css/main.css" rel="stylesheet">
   </head>
   <body>
+
+    <nav class="navbar navbar-inverse navbar-static-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Simplest Wallet</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Wallet</a></li>
+            <li><a href="#">More...</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+
+
     <!-- main view -->
-    <h1>Simplest Wallet</h1>
-    <div id="app"></div>
-    <button id="add-pvt-key">+ New Keypair</button>
+    <div class="container">
+      <div id="app" class="app">
+        <ul class="entries list-group"></ul>
+      </div>
+      <button class="btn btn-primary" id="add-pvt-key">+ New Keypair</button>
+    </div>
 
     <!-- templates -->
     <script id="address-tpl" type="text/x-handlebars-template">
-      <div class="entry" data-id={{id}}>
-        Address: <pre>{{address}}</pre>
-        {{#if pvtHidden}}
-          <button class="reveal-pvt-key">
-            < o > Reveal Private Key
-          </button>
-        {{else}}
-          <span id="privateKey">
-            - Private key: <pre>{{privateKey}}</pre>
-          </span>
-        {{/if}}
+      <li class="list-group-item entry" data-id={{id}}>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            Address A/B/C...:
+          </div>
+          <div class="row">
+            <div class="panel-body col-xs-10 col-xs-offset-1">
+              <pre>{{address}}</pre>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="panel-body col-xs-10 col-xs-offset-1">
+              {{#if pvtHidden}}
+                <div class="panel-body">
+                  <button class="btn btn-primary reveal-pvt-key">
+                    < o > Reveal Private Key
+                  </button>
+                </div>
+              {{else}}
+                <div class="panel panel-default">
+                  <div class="panel-heading">
+                    Private key:
+                  </div>
+                  <div id="private_key" class="panel-body">
+                    <pre>{{privateKey}}</pre>
+                  </div>
+                </div>
+              {{/if}}
+            </div>
+          </div>
+        </div>
       </div>
     </script>
+
     <!-- js -->
     <script charset="utf-8" type="text/javascript" src="./vendor/zepto.js"></script>
     <script charset="utf-8" type="text/javascript" src="./bundle.js"></script>
