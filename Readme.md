@@ -41,7 +41,7 @@ firefox index.html
 and open the console
 
 
-### Developing
+### Development
 
 build sass assets
 
