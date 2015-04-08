@@ -1,25 +1,24 @@
 var bitcore     = require('bitcore')
-var Handlebars  = require('handlebars')
+// var Handlebars  = require('handlebars')
 var get         = require("get-next")
+var rivets      = require("rivets")
 
 var BchainApi = {
 
+  // utxos
+
   unspent: function(address, handler) {
-    this._getJson(
+    this._getUnspentJson(
       address,
       handler
     )
-  },
-
-  _unspentHost: function() {
-    return "blockchain.info"
   },
 
   _unspentUrl: function(address) {
     return "/unspent?active="+address+"&format=json"
   },
 
-  _getJson: function(address, handler) {
+  _getUnspentJson: function(address, handler) {
     get(this._unspentOpts(address)).next(function (data, res) {
       handler(JSON.parse(data));
     }.bind(this));
@@ -27,14 +26,53 @@ var BchainApi = {
 
   _unspentOpts: function(address) {
     return {
-      host: this._unspentHost(),
+      host: this._blockchainHost(),
       path: this._unspentUrl(address),
       type: "all",
       port: 443,
       withCredentials: false
     }
+  },
+
+
+  // balance
+
+  balance: function(address, handler) {
+    this._getBalanceJson(
+      address,
+      handler
+    )
+  },
+
+  _getBalanceJson: function(address, handler) {
+    get(this._balanceOpts(address)).next(function (data, res) {
+      data = JSON.parse(data)
+      handler(data);
+    }.bind(this));
+  },
+
+  _balanceOpts: function(address) {
+    return {
+      host: this._blockchainHost(),
+      path: this._balanceUrl(address),
+      type: "all",
+      port: 443,
+      withCredentials: false
+    }
+  },
+
+  _balanceUrl: function(address) {
+    // return "/address/"+address+"?format=json"
+    return "/q/addressbalance/"+address+"?format=json"
+  },
+
+  // common
+
+  _blockchainHost: function() {
+    return "blockchain.info"
   }
 
+  // TODO commonOpts
 }
 
 // BchainApi.unspent("197GxXSqqSAkhLXyy9XrtEySvssuDcQGMY", function(result){
@@ -213,12 +251,20 @@ var bitcoreActions = {
     var key = models.key
     key.id = store.keys.length
     key = $.extend(this._generateKey(), key)
+    key.balance = "loading..."
     store.keys.push(key)
   },
 
   _generateKey: function() {
     var privateKey  = mainWallet.privateKey
     var address     = mainWallet.address
+
+    // api getBalance
+    BchainApi.balance(address, function(result){
+      console.log(result) // => Object { unspent_outputs: Array[1] }
+      store.keys[0].balance = result
+    }.bind(this))
+
     // var privateKey  = new bitcore.PrivateKey()
     // var address     = privateKey.publicKey.toAddress()
     return { privateKey: privateKey, address: address }
@@ -230,80 +276,86 @@ var bitcoreActions = {
 bitcoreActions.addKey()
 // bitcoreActions.addKey()
 
+rivets.bind($('.entries'), store.keys[0])
 
 
+//
+// // templating lib
+// var templates = {
+//   compile: function(tmplName){
+//     return Handlebars.compile(
+//       $("#"+tmplName+"-tpl").html()
+//     )
+//   },
+//
+//   all: {},
+//
+//   init: function(templates) {
+//     templates.forEach(function(tpl){
+//       this.all[tpl] = this.compile(tpl)
+//     }.bind(this))
+//   }
+// }
+//
+// // templating
+// var templateNames = ["address"]
+// templates.init(templateNames)
+//
+// var mainView = "#app .entries"
+//
+// // rendering
+// var renderAddress = function(address, view) {
+//   var html = templates.all.address(address)
+//   var div = document.createElement("div");
+//   div.innerHTML = html
+//   document.querySelector(view).appendChild(div)
+//   // $("#app").prepend(div)
+// }
+//
+//
+// // store render
+// store.keys.forEach(function(address){
+//   renderAddress(address, mainView)
+// })
+//
+//
+// // handlers
+// $("#app").on("click", ".reveal-pvt-key", function(evt){
+//   console.log(evt.target)
+//   var parent  = $(evt.target).parents(".entry").get(0)
+//   console.log("parent", parent)
+//   var id      = parseInt(parent.dataset.id)
+//   // id = store.keys.length - id // because we're prepending - but it's hard :D
+//   var key = store.keys[id]
+//
+//   // with ember
+//   // key.set('pvtHidden', false)
+//
+//   // without ember
+//   var klass = $(parent).attr("class").split(" ").join(".")
+//   // console.log(id)
+//   key.pvtHidden = false
+//   key.id = store.keys.length
+//   renderAddress(key, mainView)
+//   var elem = document.querySelectorAll("."+klass)[id]
+//   elem.className = "list-group-item entry hidden"
+// })
 
-// templating lib
-var templates = {
-  compile: function(tmplName){
-    return Handlebars.compile(
-      $("#"+tmplName+"-tpl").html()
-    )
-  },
-
-  all: {},
-
-  init: function(templates) {
-    templates.forEach(function(tpl){
-      this.all[tpl] = this.compile(tpl)
-    }.bind(this))
-  }
-}
-
-// templating
-var templateNames = ["address"]
-templates.init(templateNames)
-
-var mainView = "#app .entries"
-
-// rendering
-var renderAddress = function(address, view) {
-  var html = templates.all.address(address)
-  var div = document.createElement("div");
-  div.innerHTML = html
-  document.querySelector(view).appendChild(div)
-  // $("#app").prepend(div)
-}
-
-
-// store render
-store.keys.forEach(function(address){
-  renderAddress(address, mainView)
-})
-
-
-// handlers
 $("#app").on("click", ".reveal-pvt-key", function(evt){
-  console.log(evt.target)
-  var parent  = $(evt.target).parents(".entry").get(0)
-  console.log("parent", parent)
-  var id      = parseInt(parent.dataset.id)
-  // id = store.keys.length - id // because we're prepending - but it's hard :D
-  var key = store.keys[id]
-
-  // with ember
-  // key.set('pvtHidden', false)
-
-  // without ember
-  var klass = $(parent).attr("class").split(" ").join(".")
-  // console.log(id)
-  key.pvtHidden = false
-  key.id = store.keys.length
-  renderAddress(key, mainView)
-  var elem = document.querySelectorAll("."+klass)[id]
-  elem.className = "list-group-item entry hidden"
+  store.keys[0].pvtHidden = false
 })
 
-
-$("#add-pvt-key").on("click", function(evt){
-  bitcoreActions.addKey()
-  var key = $(store.keys).last()
-
-  $(mainView).html('')
-  store.keys.forEach(function(address){
-    renderAddress(address, mainView)
-  })
-}.bind(this))
+//
+//
+// $("#add-pvt-key").on("click", function(evt){
+//   bitcoreActions.addKey()
+//   var key = $(store.keys).last()
+//
+//   $(mainView).html('')
+//   store.keys.forEach(function(address){
+//     renderAddress(address, mainView)
+//   })
+// }.bind(this))
 
 
 

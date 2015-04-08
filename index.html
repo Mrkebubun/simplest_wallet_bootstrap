@@ -33,50 +33,62 @@
     <!-- main view -->
     <div class="container">
       <div id="app" class="app">
-        <ul class="entries list-group"></ul>
+        <ul class="entries list-group">
+
+          <!-- only one wallet -->
+          <li class="list-group-item entry" data-id={ id }>
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                Address #1:
+              </div>
+              <div class="row">
+                <div class="panel-body col-xs-10 col-xs-offset-1">
+                  <pre>{ address }</pre>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="panel-balance panel-body col-xs-10 col-xs-offset-1">
+                  Balance: <strong>{ balance }</strong>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="panel-body col-xs-10 col-xs-offset-1">
+
+                  <div rv-if="pvtHidden">
+                    <div class="panel-body">
+                      <button class="btn btn-primary reveal-pvt-key">
+                        < o > Reveal Private Key
+                      </button>
+                    </div>
+                  </div>
+                  <div rv-unless="pvtHidden">
+                    <div class="panel panel-default">
+                      <div class="panel-heading">
+                        Private key:
+                      </div>
+                      <div id="private_key" class="panel-body">
+                        <pre>{ privateKey }</pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </li>
+
+        </ul>
       </div>
       <button class="btn btn-primary" id="add-pvt-key">+ New Keypair</button>
+      (it will load the same wallet right now)
     </div>
 
-    <!-- templates -->
-    <script id="address-tpl" type="text/x-handlebars-template">
-      <li class="list-group-item entry" data-id={{id}}>
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            Address A/B/C...:
-          </div>
-          <div class="row">
-            <div class="panel-body col-xs-10 col-xs-offset-1">
-              <pre>{{address}}</pre>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="panel-body col-xs-10 col-xs-offset-1">
-              {{#if pvtHidden}}
-                <div class="panel-body">
-                  <button class="btn btn-primary reveal-pvt-key">
-                    < o > Reveal Private Key
-                  </button>
-                </div>
-              {{else}}
-                <div class="panel panel-default">
-                  <div class="panel-heading">
-                    Private key:
-                  </div>
-                  <div id="private_key" class="panel-body">
-                    <pre>{{privateKey}}</pre>
-                  </div>
-                </div>
-              {{/if}}
-            </div>
-          </div>
-        </div>
-      </div>
-    </script>
 
     <!-- js -->
-    <script charset="utf-8" type="text/javascript" src="./vendor/zepto.js"></script>
+    <!-- <script charset="utf-8" type="text/javascript" src="./vendor/zepto.js"></script> -->
+    <script charset="utf-8" type="text/javascript" src="./vendor/jquery.js"></script>
     <script charset="utf-8" type="text/javascript" src="./bundle.js"></script>
   </body>
 </html>
