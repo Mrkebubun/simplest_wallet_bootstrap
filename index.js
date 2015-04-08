@@ -3,6 +3,12 @@ var bitcore     = require('bitcore')
 var get         = require("get-next")
 var rivets      = require("rivets")
 
+// Blockchain API class
+//   (the only external api used)
+//
+// - unspent (gets the list of the unspent outputs, utxo)
+// - balance (gets the address balance)
+//
 var BchainApi = {
 
   // utxos
@@ -81,35 +87,14 @@ var BchainApi = {
 window.BchainApi = BchainApi // temp
 
 
-// Repos.list = function(user, handler) {
-//     var opts = {
-//       host: "api.github.com",
-//       path: "/users/" + user + "/repos",
-//       headers: {
-//         "user-agent": "node.js",
-//       },
-//       type: "all",
-//       port: 443,
-//       // Not really needed when running in the server with Node.
-//       withCredentials: false
-//     };
+// Bitcoin
+//   bitcoin wallet
 //
-//     var result = function(handler) {
-//       get(opts).next(function (data, res) {
-//         handler(JSON.parse(data));
-//       });
-//     };
+// - based on bitcore
+// - localstorage (saves keys locally in the browser)
+// - reveal private key
+// - one-to-many transaction TODO one input, many outputs
 //
-//     if (typeof (handler) === "function") {
-//       result(handler);
-//     } else {
-//       return {
-//         then: result
-//       };
-//     }
-//   };
-// }(this.self || global));
-
 
 var Bitcoin = {
 
@@ -240,7 +225,7 @@ var models = {
 }
 
 
-// store
+// store - object state storage
 var store  = {
   keys: []
 }
@@ -276,111 +261,17 @@ var bitcoreActions = {
 bitcoreActions.addKey()
 // bitcoreActions.addKey()
 
+// view bind
 rivets.bind($('.entries'), store.keys[0])
 
-
-//
-// // templating lib
-// var templates = {
-//   compile: function(tmplName){
-//     return Handlebars.compile(
-//       $("#"+tmplName+"-tpl").html()
-//     )
-//   },
-//
-//   all: {},
-//
-//   init: function(templates) {
-//     templates.forEach(function(tpl){
-//       this.all[tpl] = this.compile(tpl)
-//     }.bind(this))
-//   }
-// }
-//
-// // templating
-// var templateNames = ["address"]
-// templates.init(templateNames)
-//
-// var mainView = "#app .entries"
-//
-// // rendering
-// var renderAddress = function(address, view) {
-//   var html = templates.all.address(address)
-//   var div = document.createElement("div");
-//   div.innerHTML = html
-//   document.querySelector(view).appendChild(div)
-//   // $("#app").prepend(div)
-// }
-//
-//
-// // store render
-// store.keys.forEach(function(address){
-//   renderAddress(address, mainView)
-// })
-//
-//
-// // handlers
-// $("#app").on("click", ".reveal-pvt-key", function(evt){
-//   console.log(evt.target)
-//   var parent  = $(evt.target).parents(".entry").get(0)
-//   console.log("parent", parent)
-//   var id      = parseInt(parent.dataset.id)
-//   // id = store.keys.length - id // because we're prepending - but it's hard :D
-//   var key = store.keys[id]
-//
-//   // with ember
-//   // key.set('pvtHidden', false)
-//
-//   // without ember
-//   var klass = $(parent).attr("class").split(" ").join(".")
-//   // console.log(id)
-//   key.pvtHidden = false
-//   key.id = store.keys.length
-//   renderAddress(key, mainView)
-//   var elem = document.querySelectorAll("."+klass)[id]
-//   elem.className = "list-group-item entry hidden"
-// })
 
 $("#app").on("click", ".reveal-pvt-key", function(evt){
   store.keys[0].pvtHidden = false
 })
 
-//
-//
-// $("#add-pvt-key").on("click", function(evt){
-//   bitcoreActions.addKey()
-//   var key = $(store.keys).last()
-//
-//   $(mainView).html('')
-//   store.keys.forEach(function(address){
-//     renderAddress(address, mainView)
-//   })
-// }.bind(this))
 
 
-
-/// TODO:
-
-
-// - localstorage
-// - UI (bootcrap?)
-// - sort with detatch
-// - ember state?
-
-// var $people = $('ul.js-people'),
-//   $peopleli = $people.children('li');
+// TODO:
 //
-// $peopleli.sort(function(a,b){
-//   var an = a.getAttribute('data-name'),
-//     bn = b.getAttribute('data-name');
+// - make transaction from utxo and propagate trough blockchain api
 //
-//   if(an > bn) {
-//     return 1;
-//   }
-//   if(an < bn) {
-//     return -1;
-//   }
-//   return 0;
-// });
-//
-// $peopleli.detach().appendTo($people);
