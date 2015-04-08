@@ -4,21 +4,85 @@ var get         = require("get-next")
 
 var BchainApi = {
 
-  unspent: function(address) {
-    this.getJson this._unspentUrl(address)
+  unspent: function(address, handler) {
+    this._getJson(
+      address,
+      handler
+    )
+  },
+
+  _unspentHost: function() {
+    return "blockchain.info"
   },
 
   _unspentUrl: function(address) {
-    return "https://blockchain.info/unspent?active="+address+"&format=json"
+    return "/unspent?active="+address+"&format=json"
+  },
+
+  _getJson: function(address, handler) {
+    get(this._unspentOpts(address)).next(function (data, res) {
+      handler(JSON.parse(data));
+    }.bind(this));
+  },
+
+  _unspentOpts: function(address) {
+    return {
+      host: this._unspentHost(),
+      path: this._unspentUrl(address),
+      type: "all",
+      port: 443,
+      withCredentials: false
+    }
   }
 
 }
 
+// BchainApi.unspent("197GxXSqqSAkhLXyy9XrtEySvssuDcQGMY", function(result){
+//  console.log(result) // => Object { unspent_outputs: Array[1] }
+// })
+window.BchainApi = BchainApi // temp
 
-var bitcoin = {
+
+// Repos.list = function(user, handler) {
+//     var opts = {
+//       host: "api.github.com",
+//       path: "/users/" + user + "/repos",
+//       headers: {
+//         "user-agent": "node.js",
+//       },
+//       type: "all",
+//       port: 443,
+//       // Not really needed when running in the server with Node.
+//       withCredentials: false
+//     };
+//
+//     var result = function(handler) {
+//       get(opts).next(function (data, res) {
+//         handler(JSON.parse(data));
+//       });
+//     };
+//
+//     if (typeof (handler) === "function") {
+//       result(handler);
+//     } else {
+//       return {
+//         then: result
+//       };
+//     }
+//   };
+// }(this.self || global));
+
+
+var Bitcoin = {
 
   init: function() {
-    this._generateKeypair()
+    this._loadFromBackup()
+    if ( !this.privateKey ) {
+      this._generateKeyPair()
+      // optional
+      this._saveToBackup()
+    }
+    return this
   },
 
   privateKey: function() {
@@ -36,7 +100,29 @@ var bitcoin = {
   },
 
 
-  // private
+  // -- private
+
+  // backup
+
+  _loadFromBackup: function() {
+    // TODO: naive way, writes the private key in clear, hash it with a password, use bip38?
+    if (this._backupStorage) {
+      this.privateKey = localStorage.swb_privateKey
+      this.address    = localStorage.swb_address
+    }
+  },
+
+  _saveToBackup: function() {
+    var storage = localStorage
+    storage.swb_privateKey = this.privateKey
+    storage.swb_address    = this.address
+  },
+
+  _backupStorage: function() {
+    return localStorage.swb_
+  },
+
+  // keypair
 
   _generateKeyPair: function() {
     this.privateKey = new bitcore.PrivateKey()
@@ -63,24 +149,47 @@ var bitcoin = {
 
     var address = addresses[0]
 
-    return new bitcore.Transaction()
-      .from({
-        "address": address,
-        "txid":    "695918d85f25c29ecd3d403b02eef398eda136c5136958041c2e18b0d27dce83",
-        "vout":0,
-        "scriptPubKey":"76a91402efd4b4f35379ca41188b624f63449c5d26b7bf88ac",
-        "amount": amount
-      })
 
-      .from(utxos)          // Feed information about what unspent outputs one can use
-    .to(address, amount)  // Add an output with the given amount of satoshis
-    .change(address)      // Sets up a change address where the rest of the funds will go
-    .sign(privkeySet)     // Signs all the inputs it can
+    BchainApi.unspent(YOUR_ADDRESS, function(result){
+      console.log(result) // => Object { unspent_outputs: Array[1] }
+
+      var address = "19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT"
+      var unspent_output = result.unspent_output[0] // temp
+
+      this._bitcoreBuildTx(address, amount)
+    }.bind(this))
+
+
   },
 
+  _bitcoreBuildTx: function(address, amount) {
+
+        return new bitcore.Transaction()
+          .from({
+            "address": address,
+            "txid":    "695918d85f25c29ecd3d403b02eef398eda136c5136958041c2e18b0d27dce83",
+            "vout":0,
+            "scriptPubKey":"76a91402efd4b4f35379ca41188b624f63449c5d26b7bf88ac",
+            "amount": amount
+          })
+
+          // .from(utxos)          // Feed information about what unspent outputs one can use
+          // .to(address, amount)  // Add an output with the given amount of satoshis
+          // .change(address)      // Sets up a change address where the rest of the funds will go
+          // .sign(privkeySet)     // Signs all the inputs it can
+
+  }
 
 
 }
+
+window.Bitcoin = Bitcoin
+
+
+// var bitcoin = Bitcoin.init()
+
+
+// bitcoin.send
 
 
 // models (defaults)
