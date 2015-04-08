@@ -186,6 +186,8 @@ var Bitcoin = {
 window.Bitcoin = Bitcoin
 
 
+var mainWallet = Bitcoin.init()
+
 // var bitcoin = Bitcoin.init()
 
 
@@ -215,10 +217,10 @@ var bitcoreActions = {
   },
 
   _generateKey: function() {
-    var privateKey  = new bitcore.PrivateKey()
-    var address     = privateKey.publicKey.toAddress()
-    // console.log("privateKey", privateKey.toString(), privateKey)
-    // console.log("address",    address.toString(),    address   )
+    var privateKey  = mainWallet.privateKey
+    var address     = mainWallet.address
+    // var privateKey  = new bitcore.PrivateKey()
+    // var address     = privateKey.publicKey.toAddress()
     return { privateKey: privateKey, address: address }
   }
 }
@@ -226,7 +228,7 @@ var bitcoreActions = {
 
 // seed data
 bitcoreActions.addKey()
-bitcoreActions.addKey()
+// bitcoreActions.addKey()
 
 
 
