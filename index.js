@@ -3,6 +3,12 @@ var bitcore     = require('bitcore')
 var get         = require("get-next")
 var rivets      = require("rivets")
 
+
+// test command
+//
+// var b = Bitcoin.init(); b.send(0.00001, "197GxXSqqSAkhLXyy9XrtEySvssuDcQGMY")
+
+
 // Blockchain API class
 //   (the only external api used)
 //
@@ -21,7 +27,7 @@ var BchainApi = {
   },
 
   _unspentUrl: function(address) {
-    return "/unspent?active="+address+"&format=json"
+    return "/unspent?active="+address+"&format=json&cors=true"
   },
 
   _getUnspentJson: function(address, handler) {
@@ -173,33 +179,47 @@ var Bitcoin = {
     var address = addresses[0]
 
 
-    BchainApi.unspent(YOUR_ADDRESS, function(result){
-      console.log(result) // => Object { unspent_outputs: Array[1] }
+    BchainApi.unspent(this.address, function(result){
+      // console.log("unspent", result) // => Object { unspent_outputs: Array[1] }
 
       var address = "19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT"
-      var unspent_output = result.unspent_output[0] // temp
+      var unspent_output = result.unspent_outputs[0] // temp
+      console.log("unspent_output", unspent_output)
 
-      this._bitcoreBuildTx(address, amount)
+
+      var new_input = {
+        txid:         unspent_output.tx_hash,
+        outputIndex:  unspent_output.tx_index,
+        scriptPubKey: unspent_output.script,
+        amount:       unspent_output.value
+      }
+
+      // TODO: unspent_outputs
+      var transaction = this._bitcoreBuildTx(address, amount, new_input)
+      console.log("TX --- ", transaction)
+
     }.bind(this))
 
 
   },
 
-  _bitcoreBuildTx: function(address, amount) {
+  _bitcoreBuildTx: function(address, amount, unspent_output) {
+      console.log("AMOUNT", amount)
 
         return new bitcore.Transaction()
-          .from({
-            "address": address,
-            "txid":    "695918d85f25c29ecd3d403b02eef398eda136c5136958041c2e18b0d27dce83",
-            "vout":0,
-            "scriptPubKey":"76a91402efd4b4f35379ca41188b624f63449c5d26b7bf88ac",
-            "amount": amount
-          })
+          .from([unspent_output])          // Feed information about what unspent outputs one can use
+          .to(address, amount)  // Add an output with the given amount of satoshis
+          .change(this.address)      // Sets up a change address where the rest of the funds will go
+          .sign(this.privateKey)     // Signs all the inputs it can
+          // .from({
+          //   "address": address,
+          //   "txid":    "695918d85f25c29ecd3d403b02eef398eda136c5136958041c2e18b0d27dce83",
+          //   "vout":0,
+          //   "scriptPubKey":"76a91402efd4b4f35379ca41188b624f63449c5d26b7bf88ac",
+          //   "amount": amount
+          // })
 
-          // .from(utxos)          // Feed information about what unspent outputs one can use
-          // .to(address, amount)  // Add an output with the given amount of satoshis
-          // .change(address)      // Sets up a change address where the rest of the funds will go
-          // .sign(privkeySet)     // Signs all the inputs it can
+
 
   }
 
