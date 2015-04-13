@@ -1,6 +1,7 @@
 var bitcore     = require('bitcore')
 // var Handlebars  = require('handlebars')
 var get         = require("get-next")
+var post        = require("simple-post-json")
 var rivets      = require("rivets")
 
 
@@ -36,7 +37,7 @@ var BchainApi = {
     }.bind(this));
   },
 
-  _unspentOpts: function(address) {
+  _unspentOpts: function(address) { // TODO: refactor all Opts with merge/extend
     return {
       host: this._blockchainHost(),
       path: this._unspentUrl(address),
@@ -78,6 +79,37 @@ var BchainApi = {
     return "/q/addressbalance/"+address+"?format=json"
   },
 
+
+  // push tx
+
+  pushTx: function(tx_hash, handler) {
+    this._postTxJson(
+      tx_hash,
+      handler
+    )
+  },
+
+  _postTxJson: function(tx_hash, handle) {
+    var consl = console
+    postJSON(
+      this._pushTxUrl(),
+      { tx: tx_hash },
+      function(data){   //callback
+        handle(data);
+      }, function(err){ //errback
+        consl.err(err)
+    })
+  },
+
+  _pushTxUrl: function(address) {
+    // return "/address/"+address+"?format=json"
+    return "/pushtx?format=json"
+  },
+
+  // https://blockchain.info/pushtx
+  // { tx: "{}" }
+
+
   // common
 
   _blockchainHost: function() {
@@ -101,6 +133,8 @@ window.BchainApi = BchainApi // temp
 // - reveal private key
 // - one-to-many transaction TODO one input, many outputs
 //
+
+// TODO import bitcoin private key
 
 var Bitcoin = {
 

@@ -1,5 +1,5 @@
 {
-  "name": "quizwallet",
+  "name": "bitcoin_wallet_bitcore_bootstrap",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -12,6 +12,7 @@
     "bitcore": "^0.11.6",
     "get-next": "0.0.3",
     "handlebars": "^3.0.1",
-    "rivets": "^0.8.1"
+    "rivets": "^0.8.1",
+    "simple-post-json": "^0.1.2"
   }
 }
