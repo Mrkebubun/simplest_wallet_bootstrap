@@ -56,12 +56,20 @@
               <div class="row">
                 <div class="panel-body col-xs-10 col-xs-offset-1">
 
+                  <div class="form-group">
+                     <label for="wallet_address_to">Recipient address</label>
+                     <input name="address_to" type="text" class="form-control" placeholder="Enter bitcoin address" id="wallet_address_to">
+                  </div>
+
+                  <button class="btn btn-primary btn-send">
+                    Send
+                  </button>
+
+                  <div class="space50"></div>
                   <div rv-if="pvtHidden">
-                    <div class="panel-body">
-                      <button class="btn btn-primary reveal-pvt-key">
-                        < o > Reveal Private Key
-                      </button>
-                    </div>
+                    <button class="btn btn-danger btn-xs reveal-pvt-key">
+                      Reveal Private Key
+                    </button>
                   </div>
                   <div rv-unless="pvtHidden">
                     <div class="panel panel-default">

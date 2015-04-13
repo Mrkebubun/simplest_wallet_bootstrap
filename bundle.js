@@ -20659,6 +20659,22 @@ var Bitcoin = {
       var transaction = this._bitcoreBuildTx(address, amount, new_input)
       console.log("TX --- ", transaction)
 
+
+
+      // var transaction = new bitcore.Transaction()
+      // .from({"address":"17SEdNskTNiDxEbkRj87g6jacicKEw7Jot","txid":"197d0dc379356343f0e77713e8d41372b1db451b265cd916fed5662464562d22","vout":0,"scriptPubKey":"76a91446968776ae88c81c5a2459f51e1f0d05b1c02d4388ac","amount":0.003})
+      // .to('19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT', 10000)
+      // .change("17SEdNskTNiDxEbkRj87g6jacicKEw7Jot")
+      // .sign('PVT_KEY')
+
+      // .serialize()
+
+      // send ->>>>
+
+      // https://blockchain.info/pushtx
+      // { tx: "{}" }
+
+
     }.bind(this))
 
 
