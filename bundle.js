@@ -20462,6 +20462,7 @@ module.exports = function(arr, obj){
 var bitcore     = require('bitcore')
 // var Handlebars  = require('handlebars')
 var get         = require("get-next")
+var post        = require("post-json")
 var rivets      = require("rivets")
 
 
@@ -20497,7 +20498,7 @@ var BchainApi = {
     }.bind(this));
   },
 
-  _unspentOpts: function(address) {
+  _unspentOpts: function(address) { // TODO: refactor all Opts with merge/extend
     return {
       host: this._blockchainHost(),
       path: this._unspentUrl(address),
@@ -20539,6 +20540,47 @@ var BchainApi = {
     return "/q/addressbalance/"+address+"?format=json"
   },
 
+
+  // push tx
+
+  pushTx: function(tx_hash, handler) {
+    this._postTxJson(
+      tx_hash,
+      handler
+    )
+  },
+
+  _postTxJson: function(tx_hash, handle) {
+    console.log("pushing transaction:", tx_hash)
+    var consl = console
+    var host  = "localhost:3001" // TODO: prod version needs to go on wallet_cors.mkvd.net
+    var url   = 'http://' + host + this._pushTxUrl()
+
+    // var url   = 'https://' + this._blockchainHost() + this._pushTxUrl()
+    // { tx: tx_hash },
+    // var url = "https://btc.blockr.io/api/v1/tx/push"
+    // { hex: tx_hash },
+    post(
+      url,
+      { tx: tx_hash },
+      function(err, data){   //callback
+        if (err) {
+          console.error(err)
+        }
+        handle(data);
+      }
+    )
+  },
+
+  _pushTxUrl: function(address) {
+    // return "/address/"+address+"?format=json"
+    return "/pushtx?cors=true" // format=json&
+  },
+
+  // https://blockchain.info/pushtx
+  // { tx: "{}" }
+
+
   // common
 
   _blockchainHost: function() {
@@ -20563,6 +20605,8 @@ window.BchainApi = BchainApi // temp
 // - one-to-many transaction TODO one input, many outputs
 //
 
+// TODO import bitcoin private key
+
 var Bitcoin = {
 
   init: function() {
@@ -20586,7 +20630,7 @@ var Bitcoin = {
   // sends [amount] to each address
   send: function(amount, addresses) {
     var transaction = this._buildTransaction(amount, addresses)
-    return this._broadcastTransaction(transaction)
+    return this._broadcastTransaction(transaction) // TODO: callback?
   },
 
 
@@ -20643,21 +20687,37 @@ var Bitcoin = {
     BchainApi.unspent(this.address, function(result){
       // console.log("unspent", result) // => Object { unspent_outputs: Array[1] }
 
+      // TODO pay address shown
       var address = "19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT"
-      var unspent_output = result.unspent_outputs[0] // temp
+      var unspent_output = result.unspent_outputs[0] // TODO FIXME temporary!
       console.log("unspent_output", unspent_output)
 
 
       var new_input = {
+        address:      address,
         txid:         unspent_output.tx_hash,
-        outputIndex:  unspent_output.tx_index,
         scriptPubKey: unspent_output.script,
-        amount:       unspent_output.value
+        amount:       unspent_output.value,
+        vout:         unspent_output.tx_output_n,
       }
+
+      // outputIndex:  unspent_output.tx_index,
+
+      //   "address":"17SEdNskTNiDxEbkRj87g6jacicKEw7Jot",
+      //   "txid":"197d0dc379356343f0e77713e8d41372b1db451b265cd916fed5662464562d22",
+      //   "vout":0,
+      //   "scriptPubKey":"76a91446968776ae88c81c5a2459f51e1f0d05b1c02d4388ac",
+      //   "amount":0.003
+      // })
 
       // TODO: unspent_outputs
       var transaction = this._bitcoreBuildTx(address, amount, new_input)
-      console.log("TX --- ", transaction)
+      var tx_hash = transaction.serialize()
+
+      BchainApi.pushTx(tx_hash, function(){
+        console.log("BIG PUSH!!!!")
+        console.log("Transaction pushed to the bitcoin network!")
+      })
 
 
 
@@ -20683,11 +20743,27 @@ var Bitcoin = {
   _bitcoreBuildTx: function(address, amount, unspent_output) {
       console.log("AMOUNT", amount)
 
+
+      // var transaction = new bitcore.Transaction()
+      // .from({
+      //   "address":"17SEdNskTNiDxEbkRj87g6jacicKEw7Jot",
+      //   "txid":"197d0dc379356343f0e77713e8d41372b1db451b265cd916fed5662464562d22",
+      //   "vout":0,
+      //   "scriptPubKey":"76a91446968776ae88c81c5a2459f51e1f0d05b1c02d4388ac",
+      //   "amount":0.003
+      // })
+      // .to('19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT', 10000)
+      // .change("17SEdNskTNiDxEbkRj87g6jacicKEw7Jot")
+      // .sign('PVT_KEY')
+
         return new bitcore.Transaction()
           .from([unspent_output])          // Feed information about what unspent outputs one can use
           .to(address, amount)  // Add an output with the given amount of satoshis
           .change(this.address)      // Sets up a change address where the rest of the funds will go
           .sign(this.privateKey)     // Signs all the inputs it can
+          // .fee(10000)    // maybe
+          // .fee(5430)  // minimum
+
           // .from({
           //   "address": address,
           //   "txid":    "695918d85f25c29ecd3d403b02eef398eda136c5136958041c2e18b0d27dce83",
@@ -20729,6 +20805,11 @@ var store  = {
 
 // bitcore actions - add keypair to store
 var bitcoreActions = {
+  send: function(amount, addresses)  {
+    // TODO move the Transaction signing here - _buildTransaction - _bitcoreBuildTx
+    BchainApi.send(amount, addresses)
+  },
+
   addKey: function() {
     var key = models.key
     key.id = store.keys.length
@@ -20762,8 +20843,22 @@ bitcoreActions.addKey()
 rivets.bind($('.entries'), store.keys[0])
 
 
+// action handlers
 $("#app").on("click", ".reveal-pvt-key", function(evt){
   store.keys[0].pvtHidden = false
+})
+
+$("#app").on("click", ".btn-send", function(evt){
+  // TODO <button class="btn-send" rv-on-click="item.send">Send</button>
+
+  var amount = 10000 // satoshi
+
+  var addresses = []
+
+  var address = $("input[name=address_to]").val()
+  addresses.push(address)
+
+  mainWallet.send(amount, addresses) // gogogo! TODO Callback
 })
 
 
@@ -20773,7 +20868,7 @@ $("#app").on("click", ".reveal-pvt-key", function(evt){
 // - make transaction from utxo and propagate trough blockchain api
 //
 
-},{"bitcore":174,"get-next":249,"rivets":250}],174:[function(require,module,exports){
+},{"bitcore":174,"get-next":249,"post-json":250,"rivets":254}],174:[function(require,module,exports){
 (function (process,global,Buffer){
 var bitcore = module.exports;
 
@@ -21134,6 +21229,7 @@ Address._transformString = function(data, network, type) {
   if (typeof(data) !== 'string') {
     throw new TypeError('data parameter supplied is not a string.');
   }
+  data = data.trim();
   var addressBuffer = Base58Check.decode(data);
   var info = Address._transformBuffer(addressBuffer, network, type);
   return info;
@@ -30430,12 +30526,12 @@ Transaction.prototype.verify = function() {
   if (isCoinbase) {
     var buf = this.inputs[0]._script.toBuffer();
     if (buf.length < 2 || buf.length > 100) {
-      return 'coinbase trasaction script size invalid';
+      return 'coinbase transaction script size invalid';
     }
   } else {
     for (i = 0; i < this.inputs.length; i++) {
       if (this.inputs[i].isNull()) {
-        return 'tranasction input ' + i + ' has null input';
+        return 'transaction input ' + i + ' has null input';
       }
     }
   }
@@ -36723,8 +36819,8 @@ module.exports={
   "readmeFilename": "README.md",
   "_id": "elliptic@0.16.0",
   "_shasum": "9bc84e75ccd97e3e452c97371726c535314d1a57",
-  "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-0.16.0.tgz",
-  "_from": "https://registry.npmjs.org/elliptic/-/elliptic-0.16.0.tgz"
+  "_from": "https://registry.npmjs.org/elliptic/-/elliptic-0.16.0.tgz",
+  "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-0.16.0.tgz"
 }
 
 },{}],234:[function(require,module,exports){
@@ -44975,7 +45071,7 @@ module.exports.WordArray = X64WordArray
 },{"./word-array":246}],248:[function(require,module,exports){
 module.exports={
   "name": "bitcore",
-  "version": "0.11.6",
+  "version": "0.11.7",
   "description": "A pure and powerful JavaScript Bitcoin library.",
   "author": {
     "name": "BitPay",
@@ -45073,14 +45169,14 @@ module.exports={
     "sinon": "^1.13.0"
   },
   "license": "MIT",
-  "gitHead": "ad060436b3333e8c1b4385c62726a255e6a04f48",
+  "gitHead": "c486ff7b85e8dcf9fc5773eba6cbdec61c58835d",
   "bugs": {
     "url": "https://github.com/bitpay/bitcore/issues"
   },
   "homepage": "https://github.com/bitpay/bitcore",
-  "_id": "bitcore@0.11.6",
-  "_shasum": "88329d23725e822ff585193d86c967b9dc5238eb",
-  "_from": "bitcore@*",
+  "_id": "bitcore@0.11.7",
+  "_shasum": "2c41f6e12a16283d4780b3312fa6c38237f113f2",
+  "_from": "bitcore@^0.11.6",
   "_npmVersion": "1.4.28",
   "_npmUser": {
     "name": "maraoz",
@@ -45105,12 +45201,11 @@ module.exports={
     }
   ],
   "dist": {
-    "shasum": "88329d23725e822ff585193d86c967b9dc5238eb",
-    "tarball": "http://registry.npmjs.org/bitcore/-/bitcore-0.11.6.tgz"
+    "shasum": "2c41f6e12a16283d4780b3312fa6c38237f113f2",
+    "tarball": "http://registry.npmjs.org/bitcore/-/bitcore-0.11.7.tgz"
   },
   "directories": {},
-  "_resolved": "https://registry.npmjs.org/bitcore/-/bitcore-0.11.6.tgz",
-  "readme": "ERROR: No README data found!"
+  "_resolved": "https://registry.npmjs.org/bitcore/-/bitcore-0.11.7.tgz"
 }
 
 },{}],249:[function(require,module,exports){
@@ -45195,6 +45290,400 @@ module.exports = function(options, protocol) {
 };
 
 },{"http":143,"https":147}],250:[function(require,module,exports){
+var hq;
+
+hq = require('hyperquest');
+
+module.exports = function(url, data, cb) {
+  var body, buffer, opts, ws;
+
+  body = JSON.stringify(data);
+
+  opts = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': body.length
+    }
+  };
+
+  ws = hq.post(url, opts);
+  ws.end(body);
+
+  buffer = '';
+  ws.on('data', function(chunk) {
+    return buffer += chunk;
+  });
+
+  ws.on('error', function(err) {
+    return cb(err);
+  });
+
+  return ws.on('end', function() {
+    var res, err = null;
+    res = ws.response;
+
+    if (res.statusCode >= 400) {
+      err = new Error('Bad statusCode in response: '+ res.statusCode);
+      err.statusCode = res.statusCode;
+    }
+
+    res.body = buffer;
+    return cb(err, res);
+  });
+};
+
+},{"hyperquest":251}],251:[function(require,module,exports){
+(function (process,Buffer){
+var url = require('url');
+var http = require('http');
+var https = require('https');
+var through = require('through');
+var duplexer = require('duplexer');
+
+module.exports = hyperquest;
+
+function bind (obj, fn) {
+  var args = Array.prototype.slice.call(arguments, 2);
+  return function () {
+    var argv = args.concat(Array.prototype.slice.call(arguments));
+    return fn.apply(obj, argv);
+  }
+}
+
+function hyperquest (uri, opts, cb, extra) {
+    if (typeof uri === 'object') {
+        cb = opts;
+        opts = uri;
+        uri = undefined;
+    }
+    if (typeof opts === 'function') {
+      cb = opts;
+      opts = undefined;
+    }
+    if (!opts) opts = {};
+    if (uri !== undefined) opts.uri = uri;
+    if (extra) opts.method = extra.method;
+    
+    var req = new Req(opts);
+    var ws = req.duplex && through();
+    if (ws) ws.pause();
+    var rs = through();
+    
+    var dup = req.duplex ? duplexer(ws, rs) : rs;
+    if (!req.duplex) {
+        rs.writable = false;
+    }
+    dup.request = req;
+    dup.setHeader = bind(req, req.setHeader);
+    dup.setLocation = bind(req, req.setLocation);
+    
+    var closed = false;
+    dup.on('close', function () { closed = true });
+    
+    process.nextTick(function () {
+        if (closed) return;
+        dup.on('close', function () { r.destroy() });
+        
+        var r = req._send();
+        r.on('error', bind(dup, dup.emit, 'error'));
+        
+        r.on('response', function (res) {
+            dup.response = res;
+            dup.emit('response', res);
+            if (req.duplex) res.pipe(rs)
+            else {
+                res.on('data', function (buf) { rs.queue(buf) });
+                res.on('end', function () { rs.queue(null) });
+            }
+        });
+        
+        if (req.duplex) {
+            ws.pipe(r);
+            ws.resume();
+        }
+        else r.end();
+    });
+    
+    if (cb) {
+        dup.on('error', cb);
+        dup.on('response', bind(dup, cb, null));
+    }
+    return dup;
+}
+
+hyperquest.get = hyperquest;
+
+hyperquest.post = function (uri, opts, cb) {
+    return hyperquest(uri, opts, cb, { method: 'POST' });
+};
+
+hyperquest.put = function (uri, opts, cb) {
+    return hyperquest(uri, opts, cb, { method: 'PUT' });
+};
+
+hyperquest['delete'] = function (uri, opts, cb) {
+    return hyperquest(uri, opts, cb, { method: 'DELETE' });
+};
+
+function Req (opts) {
+    this.headers = opts.headers || {};
+    
+    var method = (opts.method || 'GET').toUpperCase();
+    this.method = method;
+    this.duplex = !(method === 'GET' || method === 'DELETE'
+        || method === 'HEAD');
+    this.auth = opts.auth;
+    
+    this.options = opts;
+    
+    if (opts.uri) this.setLocation(opts.uri);
+}
+
+Req.prototype._send = function () {
+    this._sent = true;
+    
+    var headers = this.headers || {};
+    var u = url.parse(this.uri);
+    var au = u.auth || this.auth;
+    if (au) {
+        headers.authorization = 'Basic ' + Buffer(au).toString('base64');
+    }
+    
+    var protocol = u.protocol || '';
+    var iface = protocol === 'https:' ? https : http;
+    var opts = {
+        scheme: protocol.replace(/:$/, ''),
+        method: this.method,
+        host: u.hostname,
+        port: Number(u.port) || (protocol === 'https:' ? 443 : 80),
+        path: u.path,
+        agent: false,
+        headers: headers
+    };
+    if (protocol === 'https:') {
+        opts.pfx = this.options.pfx;
+        opts.key = this.options.key;
+        opts.cert = this.options.cert;
+        opts.ca = this.options.ca;
+        opts.ciphers = this.options.ciphers;
+        opts.rejectUnauthorized = this.options.rejectUnauthorized;
+        opts.secureProtocol = this.options.secureProtocol;
+    }
+    var req = iface.request(opts);
+    
+    if (req.setTimeout) req.setTimeout(Math.pow(2, 32) * 1000);
+    return req;
+};
+
+Req.prototype.setHeader = function (key, value) {
+    if (this._sent) throw new Error('request already sent');
+    this.headers[key] = value;
+    return this;
+};
+
+Req.prototype.setLocation = function (uri) {
+    this.uri = uri;
+    return this;
+};
+
+}).call(this,require('_process'),require("buffer").Buffer)
+},{"_process":150,"buffer":3,"duplexer":252,"http":143,"https":147,"through":253,"url":168}],252:[function(require,module,exports){
+var Stream = require("stream")
+var writeMethods = ["write", "end", "destroy"]
+var readMethods = ["resume", "pause"]
+var readEvents = ["data", "close"]
+var slice = Array.prototype.slice
+
+module.exports = duplex
+
+function forEach (arr, fn) {
+    if (arr.forEach) {
+        return arr.forEach(fn)
+    }
+
+    for (var i = 0; i < arr.length; i++) {
+        fn(arr[i], i)
+    }
+}
+
+function duplex(writer, reader) {
+    var stream = new Stream()
+    var ended = false
+
+    forEach(writeMethods, proxyWriter)
+
+    forEach(readMethods, proxyReader)
+
+    forEach(readEvents, proxyStream)
+
+    reader.on("end", handleEnd)
+
+    writer.on("drain", function() {
+      stream.emit("drain")
+    })
+
+    writer.on("error", reemit)
+    reader.on("error", reemit)
+
+    stream.writable = writer.writable
+    stream.readable = reader.readable
+
+    return stream
+
+    function proxyWriter(methodName) {
+        stream[methodName] = method
+
+        function method() {
+            return writer[methodName].apply(writer, arguments)
+        }
+    }
+
+    function proxyReader(methodName) {
+        stream[methodName] = method
+
+        function method() {
+            stream.emit(methodName)
+            var func = reader[methodName]
+            if (func) {
+                return func.apply(reader, arguments)
+            }
+            reader.emit(methodName)
+        }
+    }
+
+    function proxyStream(methodName) {
+        reader.on(methodName, reemit)
+
+        function reemit() {
+            var args = slice.call(arguments)
+            args.unshift(methodName)
+            stream.emit.apply(stream, args)
+        }
+    }
+
+    function handleEnd() {
+        if (ended) {
+            return
+        }
+        ended = true
+        var args = slice.call(arguments)
+        args.unshift("end")
+        stream.emit.apply(stream, args)
+    }
+
+    function reemit(err) {
+        stream.emit("error", err)
+    }
+}
+
+},{"stream":166}],253:[function(require,module,exports){
+(function (process){
+var Stream = require('stream')
+
+// through
+//
+// a stream that does nothing but re-emit the input.
+// useful for aggregating a series of changing but not ending streams into one stream)
+
+
+
+exports = module.exports = through
+through.through = through
+
+//create a readable writable stream.
+
+function through (write, end) {
+  write = write || function (data) { this.queue(data) }
+  end = end || function () { this.queue(null) }
+
+  var ended = false, destroyed = false, buffer = []
+  var stream = new Stream()
+  stream.readable = stream.writable = true
+  stream.paused = false
+
+  stream.write = function (data) {
+    write.call(this, data)
+    return !stream.paused
+  }
+
+  function drain() {
+    while(buffer.length && !stream.paused) {
+      var data = buffer.shift()
+      if(null === data)
+        return stream.emit('end')
+      else
+        stream.emit('data', data)
+    }
+  }
+
+  stream.queue = stream.push = function (data) {
+    buffer.push(data)
+    drain()
+    return stream
+  }
+
+  //this will be registered as the first 'end' listener
+  //must call destroy next tick, to make sure we're after any
+  //stream piped from here.
+  //this is only a problem if end is not emitted synchronously.
+  //a nicer way to do this is to make sure this is the last listener for 'end'
+
+  stream.on('end', function () {
+    stream.readable = false
+    if(!stream.writable)
+      process.nextTick(function () {
+        stream.destroy()
+      })
+  })
+
+  function _end () {
+    stream.writable = false
+    end.call(stream)
+    if(!stream.readable)
+      stream.destroy()
+  }
+
+  stream.end = function (data) {
+    if(ended) return
+    ended = true
+    if(arguments.length) stream.write(data)
+    _end() // will emit or queue
+    return stream
+  }
+
+  stream.destroy = function () {
+    if(destroyed) return
+    destroyed = true
+    ended = true
+    buffer.length = 0
+    stream.writable = stream.readable = false
+    stream.emit('close')
+    return stream
+  }
+
+  stream.pause = function () {
+    if(stream.paused) return
+    stream.paused = true
+    stream.emit('pause')
+    return stream
+  }
+  stream.resume = function () {
+    if(stream.paused) {
+      stream.paused = false
+    }
+    drain()
+    //may have become paused again,
+    //as drain emits 'data'.
+    if(!stream.paused)
+      stream.emit('drain')
+    return stream
+  }
+  return stream
+}
+
+
+}).call(this,require('_process'))
+},{"_process":150,"stream":166}],254:[function(require,module,exports){
 // Rivets.js
 // version: 0.8.1
 // author: Michael Richards
@@ -46581,7 +47070,7 @@ module.exports = function(options, protocol) {
 
 }).call(this);
 
-},{"sightglass":251}],251:[function(require,module,exports){
+},{"sightglass":255}],255:[function(require,module,exports){
 (function() {
   // Public sightglass interface.
   function sightglass(obj, keypath, callback, options) {

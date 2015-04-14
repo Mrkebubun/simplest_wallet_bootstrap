@@ -1,7 +1,7 @@
 var bitcore     = require('bitcore')
 // var Handlebars  = require('handlebars')
 var get         = require("get-next")
-var post        = require("simple-post-json")
+var post        = require("post-json")
 var rivets      = require("rivets")
 
 
@@ -90,20 +90,30 @@ var BchainApi = {
   },
 
   _postTxJson: function(tx_hash, handle) {
+    console.log("pushing transaction:", tx_hash)
     var consl = console
-    postJSON(
-      this._pushTxUrl(),
+    var host  = "localhost:3001" // TODO: prod version needs to go on wallet_cors.mkvd.net
+    var url   = 'http://' + host + this._pushTxUrl()
+
+    // var url   = 'https://' + this._blockchainHost() + this._pushTxUrl()
+    // { tx: tx_hash },
+    // var url = "https://btc.blockr.io/api/v1/tx/push"
+    // { hex: tx_hash },
+    post(
+      url,
       { tx: tx_hash },
-      function(data){   //callback
+      function(err, data){   //callback
+        if (err) {
+          console.error(err)
+        }
         handle(data);
-      }, function(err){ //errback
-        consl.err(err)
-    })
+      }
+    )
   },
 
   _pushTxUrl: function(address) {
     // return "/address/"+address+"?format=json"
-    return "/pushtx?format=json"
+    return "/pushtx?cors=true" // format=json&
   },
 
   // https://blockchain.info/pushtx
@@ -159,7 +169,7 @@ var Bitcoin = {
   // sends [amount] to each address
   send: function(amount, addresses) {
     var transaction = this._buildTransaction(amount, addresses)
-    return this._broadcastTransaction(transaction)
+    return this._broadcastTransaction(transaction) // TODO: callback?
   },
 
 
@@ -216,21 +226,37 @@ var Bitcoin = {
     BchainApi.unspent(this.address, function(result){
       // console.log("unspent", result) // => Object { unspent_outputs: Array[1] }
 
+      // TODO pay address shown
       var address = "19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT"
-      var unspent_output = result.unspent_outputs[0] // temp
+      var unspent_output = result.unspent_outputs[0] // TODO FIXME temporary!
       console.log("unspent_output", unspent_output)
 
 
       var new_input = {
+        address:      address,
         txid:         unspent_output.tx_hash,
-        outputIndex:  unspent_output.tx_index,
         scriptPubKey: unspent_output.script,
-        amount:       unspent_output.value
+        amount:       unspent_output.value,
+        vout:         unspent_output.tx_output_n,
       }
+
+      // outputIndex:  unspent_output.tx_index,
+
+      //   "address":"17SEdNskTNiDxEbkRj87g6jacicKEw7Jot",
+      //   "txid":"197d0dc379356343f0e77713e8d41372b1db451b265cd916fed5662464562d22",
+      //   "vout":0,
+      //   "scriptPubKey":"76a91446968776ae88c81c5a2459f51e1f0d05b1c02d4388ac",
+      //   "amount":0.003
+      // })
 
       // TODO: unspent_outputs
       var transaction = this._bitcoreBuildTx(address, amount, new_input)
-      console.log("TX --- ", transaction)
+      var tx_hash = transaction.serialize()
+
+      BchainApi.pushTx(tx_hash, function(){
+        console.log("BIG PUSH!!!!")
+        console.log("Transaction pushed to the bitcoin network!")
+      })
 
 
 
@@ -256,11 +282,27 @@ var Bitcoin = {
   _bitcoreBuildTx: function(address, amount, unspent_output) {
       console.log("AMOUNT", amount)
 
+
+      // var transaction = new bitcore.Transaction()
+      // .from({
+      //   "address":"17SEdNskTNiDxEbkRj87g6jacicKEw7Jot",
+      //   "txid":"197d0dc379356343f0e77713e8d41372b1db451b265cd916fed5662464562d22",
+      //   "vout":0,
+      //   "scriptPubKey":"76a91446968776ae88c81c5a2459f51e1f0d05b1c02d4388ac",
+      //   "amount":0.003
+      // })
+      // .to('19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT', 10000)
+      // .change("17SEdNskTNiDxEbkRj87g6jacicKEw7Jot")
+      // .sign('PVT_KEY')
+
         return new bitcore.Transaction()
           .from([unspent_output])          // Feed information about what unspent outputs one can use
           .to(address, amount)  // Add an output with the given amount of satoshis
           .change(this.address)      // Sets up a change address where the rest of the funds will go
           .sign(this.privateKey)     // Signs all the inputs it can
+          // .fee(10000)    // maybe
+          // .fee(5430)  // minimum
+
           // .from({
           //   "address": address,
           //   "txid":    "695918d85f25c29ecd3d403b02eef398eda136c5136958041c2e18b0d27dce83",
@@ -302,6 +344,11 @@ var store  = {
 
 // bitcore actions - add keypair to store
 var bitcoreActions = {
+  send: function(amount, addresses)  {
+    // TODO move the Transaction signing here - _buildTransaction - _bitcoreBuildTx
+    BchainApi.send(amount, addresses)
+  },
+
   addKey: function() {
     var key = models.key
     key.id = store.keys.length
@@ -335,8 +382,22 @@ bitcoreActions.addKey()
 rivets.bind($('.entries'), store.keys[0])
 
 
+// action handlers
 $("#app").on("click", ".reveal-pvt-key", function(evt){
   store.keys[0].pvtHidden = false
+})
+
+$("#app").on("click", ".btn-send", function(evt){
+  // TODO <button class="btn-send" rv-on-click="item.send">Send</button>
+
+  var amount = 10000 // satoshi
+
+  var addresses = []
+
+  var address = $("input[name=address_to]").val()
+  addresses.push(address)
+
+  mainWallet.send(amount, addresses) // gogogo! TODO Callback
 })
 
 
