@@ -148,18 +148,18 @@ window.BchainApi = BchainApi // temp
 
 var Bitcoin = {
 
+
   init: function() {
+    this.privateKey = null
+    this.address    = null
+
     this._loadFromBackup()
-    if ( !this.privateKey ) {
+    if ( !this.privateKey || !this.privateKey.toString() ) {
       this._generateKeyPair()
       // optional
       this._saveToBackup()
     }
     return this
-  },
-
-  privateKey: function() {
-    return this.privateKey;
   },
 
   address: function() {
@@ -179,20 +179,20 @@ var Bitcoin = {
 
   _loadFromBackup: function() {
     // TODO: naive way, writes the private key in clear, hash it with a password, use bip38?
-    if (this._backupStorage) {
-      this.privateKey = localStorage.swb_privateKey
+    if (this._backupStorage()) {
+      // TODO catch exception
+      this.privateKey = new bitcore.PrivateKey(localStorage.swb_privateKey)
       this.address    = localStorage.swb_address
     }
   },
 
   _saveToBackup: function() {
-    var storage = localStorage
-    storage.swb_privateKey = this.privateKey
-    storage.swb_address    = this.address
+    localStorage.swb_privateKey = this.privateKey.toString()
+    localStorage.swb_address    = this.address
   },
 
   _backupStorage: function() {
-    return localStorage.swb_
+    return localStorage.swb_privateKey
   },
 
   // keypair
@@ -331,8 +331,9 @@ var mainWallet = Bitcoin.init()
 
 // models (defaults)
 var models = {
-  key: {
-    pvtHidden: true
+  Key: {
+    pvtHidden: true,
+    regenerateEnabled: false
   }
 }
 
@@ -350,7 +351,7 @@ var bitcoreActions = {
   },
 
   addKey: function() {
-    var key = models.key
+    var key = models.Key
     key.id = store.keys.length
     key = $.extend(this._generateKey(), key)
     key.balance = "loading..."
@@ -358,18 +359,20 @@ var bitcoreActions = {
   },
 
   _generateKey: function() {
-    var privateKey  = mainWallet.privateKey
-    var address     = mainWallet.address
+    var privateKey    = mainWallet.privateKey
+    var address       = mainWallet.address
+    var privateKeyWIF = mainWallet.privateKey.toWIF()
+
 
     // api getBalance
-    BchainApi.balance(address, function(result){
-      console.log(result) // => Object { unspent_outputs: Array[1] }
-      store.keys[0].balance = result
+    BchainApi.balance(address, function(balance){
+      store.keys[0].balance     = balance
+      store.keys[0].balance_btc = balance*Math.pow(10, -8)
     }.bind(this))
 
     // var privateKey  = new bitcore.PrivateKey()
     // var address     = privateKey.publicKey.toAddress()
-    return { privateKey: privateKey, address: address }
+    return { privateKey: privateKey, address: address, privateKeyWIF: privateKeyWIF }
   }
 }
 
@@ -400,7 +403,21 @@ $("#app").on("click", ".btn-send", function(evt){
   mainWallet.send(amount, addresses) // gogogo! TODO Callback
 })
 
+// dangerous
+$("#app").on("click", ".regenerate", function(evt){
+  // TODO alert dangerous - can't execute with more than 5 millibits
+  //
+  // delete localStorage['swb_privateKey']
+  localStorage.removeItem('swb_privateKey')
+  localStorage.removeItem('swb_address')
+})
 
+$("#app").on("click", ".balance_check", function(evt){
+  BchainApi.balance(mainWallet.address, function(balance){
+    store.keys[0].balance     = balance
+    store.keys[0].balance_btc = balance*Math.pow(10, -8)
+  }.bind(this))
+})
 
 // TODO:
 //
