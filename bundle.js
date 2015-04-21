@@ -20465,6 +20465,7 @@ var get         = require("get-next")
 var post        = require("post-json")
 var rivets      = require("rivets")
 
+window.bitcore = bitcore
 
 // test command
 //
@@ -20553,10 +20554,22 @@ var BchainApi = {
   _postTxJson: function(tx_hash, handle) {
     console.log("pushing transaction:", tx_hash)
     var consl = console
-    var host  = "localhost:3001" // TODO: prod version needs to go on wallet_cors.mkvd.net
-    var url   = 'http://' + host + this._pushTxUrl()
+    // var host  = "localhost:3001" // TODO: prod version needs to go on wallet_cors.mkvd.net
+    // var url   = 'http://' + host + this._pushTxUrl()
 
-    // var url   = 'https://' + this._blockchainHost() + this._pushTxUrl()
+    var url   = 'https://' + this._blockchainHost() + this._pushTxUrl()
+
+
+    $.post(url, { tx: tx_hash }, function(data) {
+      console.log(data.responseText)
+    }).fail(function(jqxhr, textStatus, error) {
+      console.error(
+        jqxhr.responseText, error
+      )
+    })
+
+    return;
+
     // { tx: tx_hash },
     // var url = "https://btc.blockr.io/api/v1/tx/push"
     // { hex: tx_hash },
@@ -20645,8 +20658,6 @@ var Bitcoin = {
       this.privateKey = new bitcore.PrivateKey(localStorage.swb_privateKey)
       this.address    = localStorage.swb_address
     }
-    console.log(localStorage.swb_privateKey)
-    console.log(this.privateKey)
   },
 
   _saveToBackup: function() {
@@ -20681,27 +20692,29 @@ var Bitcoin = {
   _buildTransaction: function(amount, addresses) {
     // TODO: right now sends [amount] only to the first address
 
-    var minimum_non_dust_amount = 5430 // .fee(minimum_non_dust_amount)
+    var minimum_non_dust_amount = 5431 // .fee(minimum_non_dust_amount)
 
     var address = addresses[0]
 
+    console.log("address >>>>", this.address)
 
     BchainApi.unspent(this.address, function(result){
       // console.log("unspent", result) // => Object { unspent_outputs: Array[1] }
 
-      // TODO pay address shown
-      var address = "19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT"
+
       var unspent_output = result.unspent_outputs[0] // TODO FIXME temporary!
       console.log("unspent_output", unspent_output)
 
 
       var new_input = {
-        address:      address,
+        address:      this.address,
         txid:         unspent_output.tx_hash,
         scriptPubKey: unspent_output.script,
         amount:       unspent_output.value,
         vout:         unspent_output.tx_output_n,
       }
+
+      console.log("new input", new_input)
 
       // outputIndex:  unspent_output.tx_index,
 
@@ -20758,6 +20771,25 @@ var Bitcoin = {
       // .change("17SEdNskTNiDxEbkRj87g6jacicKEw7Jot")
       // .sign('PVT_KEY')
 
+      // new bitcore.Transaction().from(
+      //   [{"address":"19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT",
+      //   "txid":"c7850fbdadeafeaa7c7fae4306cb7e232c7eb65c662228bc7612607a9b5f9478",
+      //   "scriptPubKey":"76a914f1ae57a4d3e85c362d73f61ff22585c36842940288ac",
+      //   "amount":10000,
+      //   "vout":0}]).to('19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT', '10000')
+      //   .change('1P2thkXyQTDp1qFqR9fCYTnWcaVdpiWsuh')
+      //   .sign('2c14faa6b4dda737cec306f60bbbaceeeb0e40f7552c3440d313f43feb0dd01b')
+
+      amount = amount*Math.pow(10, 8)
+
+      // TODO: Raise amount > unspent_output amount
+
+      var from = ".from(["+JSON.stringify(unspent_output)+"])"
+      var to   = ".to('"+address+"', '"+amount+"')"
+      var change_sign_serialize = ".change('"+this.address+"').sign('"+this.privateKey+"').serialize()"
+      console.log("new bitcore.Transaction()"+from+to+change_sign_serialize)
+
+
         return new bitcore.Transaction()
           .from([unspent_output])          // Feed information about what unspent outputs one can use
           .to(address, amount)  // Add an output with the given amount of satoshis
@@ -20786,6 +20818,7 @@ window.Bitcoin = Bitcoin
 
 var mainWallet = Bitcoin.init()
 
+
 // var bitcoin = Bitcoin.init()
 
 
@@ -20795,7 +20828,8 @@ var mainWallet = Bitcoin.init()
 // models (defaults)
 var models = {
   Key: {
-    pvtHidden: true
+    pvtHidden: true,
+    regenerateEnabled: false
   }
 }
 
@@ -20847,6 +20881,14 @@ bitcoreActions.addKey()
 rivets.bind($('.entries'), store.keys[0])
 
 
+// load view (presenters)
+store.keys[0].address_blockchain_url = "https://blockchain.info/address/"+store.keys[0].address
+
+
+
+// rivets.bind($('.entries'), messages)
+
+
 // action handlers
 $("#app").on("click", ".reveal-pvt-key", function(evt){
   store.keys[0].pvtHidden = false
@@ -20855,11 +20897,17 @@ $("#app").on("click", ".reveal-pvt-key", function(evt){
 $("#app").on("click", ".btn-send", function(evt){
   // TODO <button class="btn-send" rv-on-click="item.send">Send</button>
 
-  var amount = 10000 // satoshi
+  var amount = 0.0001 // BTC // 1000 // satoshi
 
   var addresses = []
 
-  var address = $("input[name=address_to]").val()
+  var address = document.querySelector("input[name=address_to]").value
+
+  // TODO remove in prod
+  // this is just for testing convenience:
+  if (!address || address == "")
+    address = "19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT"
+
   addresses.push(address)
 
   mainWallet.send(amount, addresses) // gogogo! TODO Callback
@@ -20878,8 +20926,21 @@ $("#app").on("click", ".balance_check", function(evt){
   BchainApi.balance(mainWallet.address, function(balance){
     store.keys[0].balance     = balance
     store.keys[0].balance_btc = balance*Math.pow(10, -8)
-  }.bind(this))
+  , function(error){
+    store.keys[0].balance     = "Connection error, cannot retreive balance"
+  }}.bind(this))
 })
+
+store.keys[0].amountFiat = "-"
+var updateAmountFiat = function(evt) {
+  console.log("TODO: update amount fiat")
+  store.keys[0].amountFiat = "update"
+}
+
+$("#app").on("change", "input[name=address_to]", updateAmountFiat)
+$("#app").on("change", "input[name=currency_to]", updateAmountFiat)
+
+
 
 // TODO:
 //
