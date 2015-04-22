@@ -247,7 +247,7 @@ var Bitcoin = {
 
       var new_input = {
         address:      this.address,
-        txid:         unspent_output.tx_hash,
+        txid:         unspent_output.tx_hash_big_endian,
         scriptPubKey: unspent_output.script,
         amount:       unspent_output.value,
         vout:         unspent_output.tx_output_n,
@@ -319,7 +319,8 @@ var Bitcoin = {
       //   .change('1P2thkXyQTDp1qFqR9fCYTnWcaVdpiWsuh')
       //   .sign('2c14faa6b4dda737cec306f60bbbaceeeb0e40f7552c3440d313f43feb0dd01b')
 
-      amount = amount*Math.pow(10, 8)
+      // amount = amount*Math.pow(10, 7)
+      amount = 1000
 
       // TODO: Raise amount > unspent_output amount
 
@@ -327,6 +328,10 @@ var Bitcoin = {
       var to   = ".to('"+address+"', '"+amount+"')"
       var change_sign_serialize = ".change('"+this.address+"').sign('"+this.privateKey+"').serialize()"
       console.log("new bitcore.Transaction()"+from+to+change_sign_serialize)
+
+
+      // VALID
+      // new bitcore.Transaction().from([{"address":"15QcaJHarJexreJscY1WPgPPGRQ8qbHNMV","txid":"d3dcb9f4d5ced3fbde96589a89265bbed795a002c8a119401eed6c2ab7c23786","scriptPubKey":"76a9143057c41a128189779c06df57817844646646d0d288ac","amount":0.0001,"vout":0}]).to('19e2eU15xKbM9pyDwjFsBJFaSeKoDxp8YT', 1000).change('15QcaJHarJexreJscY1WPgPPGRQ8qbHNMV').sign('PVT KEY').serialize()
 
 
         return new bitcore.Transaction()
