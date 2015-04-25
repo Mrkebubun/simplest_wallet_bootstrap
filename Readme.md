@@ -52,3 +52,7 @@ bundle install
 guard
 # to watch the sass files and generate the main css
 ```
+
+---
+
+https://github.com/720kb/biwi/blob/master/client/biwi.js
