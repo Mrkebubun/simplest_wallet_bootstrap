@@ -55,4 +55,5 @@ guard
 
 ---
 
+you can find an HD integrated wallet in a streaming micro transaction client app here: 
 https://github.com/720kb/biwi/blob/master/client/biwi.js
