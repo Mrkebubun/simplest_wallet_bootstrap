@@ -3,6 +3,7 @@ var bitcore     = require('bitcore')
 var get         = require("get-next")
 var post        = require("post-json")
 var rivets      = require("rivets")
+var BchainApi   = require("blockchain-api-basic")
 
 window.bitcore = bitcore
 
@@ -11,141 +12,9 @@ window.bitcore = bitcore
 // var b = Bitcoin.init(); b.send(0.00001, "197GxXSqqSAkhLXyy9XrtEySvssuDcQGMY")
 
 
-// Blockchain API class
-//   (the only external api used)
-//
-// - unspent (gets the list of the unspent outputs, utxo)
-// - balance (gets the address balance)
-//
-var BchainApi = {
-
-  // utxos
-
-  unspent: function(address, handler) {
-    this._getUnspentJson(
-      address,
-      handler
-    )
-  },
-
-  _unspentUrl: function(address) {
-    return "/unspent?active="+address+"&format=json&cors=true"
-  },
-
-  _getUnspentJson: function(address, handler) {
-    get(this._unspentOpts(address)).next(function (data, res) {
-      handler(JSON.parse(data));
-    }.bind(this));
-  },
-
-  _unspentOpts: function(address) { // TODO: refactor all Opts with merge/extend
-    return {
-      host: this._blockchainHost(),
-      path: this._unspentUrl(address),
-      type: "all",
-      port: 443,
-      withCredentials: false
-    }
-  },
-
-
-  // balance
-
-  balance: function(address, handler) {
-    this._getBalanceJson(
-      address,
-      handler
-    )
-  },
-
-  _getBalanceJson: function(address, handler) {
-    get(this._balanceOpts(address)).next(function (data, res) {
-      data = JSON.parse(data)
-      handler(data);
-    }.bind(this));
-  },
-
-  _balanceOpts: function(address) {
-    return {
-      host: this._blockchainHost(),
-      path: this._balanceUrl(address),
-      type: "all",
-      port: 443,
-      withCredentials: false
-    }
-  },
-
-  _balanceUrl: function(address) {
-    // return "/address/"+address+"?format=json"
-    return "/q/addressbalance/"+address+"?format=json"
-  },
-
-
-  // push tx
-
-  pushTx: function(tx_hash, handler) {
-    this._postTxJson(
-      tx_hash,
-      handler
-    )
-  },
-
-  _postTxJson: function(tx_hash, handle) {
-    console.log("pushing transaction:", tx_hash)
-    var consl = console
-    // var host  = "localhost:3001" // TODO: prod version needs to go on wallet_cors.mkvd.net
-    // var url   = 'http://' + host + this._pushTxUrl()
-
-    var url   = 'https://' + this._blockchainHost() + this._pushTxUrl()
-
-
-    $.post(url, { tx: tx_hash }, function(data) {
-      console.log(data.responseText)
-    }).fail(function(jqxhr, textStatus, error) {
-      console.error(
-        jqxhr.responseText, error
-      )
-    })
-
-    return;
-
-    // { tx: tx_hash },
-    // var url = "https://btc.blockr.io/api/v1/tx/push"
-    // { hex: tx_hash },
-    post(
-      url,
-      { tx: tx_hash },
-      function(err, data){   //callback
-        if (err) {
-          console.error(err)
-        }
-        handle(data);
-      }
-    )
-  },
-
-  _pushTxUrl: function(address) {
-    // return "/address/"+address+"?format=json"
-    return "/pushtx?cors=true" // format=json&
-  },
-
-  // https://blockchain.info/pushtx
-  // { tx: "{}" }
-
-
-  // common
-
-  _blockchainHost: function() {
-    return "blockchain.info"
-  }
-
-  // TODO commonOpts
-}
-
 // BchainApi.unspent("197GxXSqqSAkhLXyy9XrtEySvssuDcQGMY", function(result){
 //  console.log(result) // => Object { unspent_outputs: Array[1] }
 // })
-window.BchainApi = BchainApi // temp
 
 
 // Bitcoin
