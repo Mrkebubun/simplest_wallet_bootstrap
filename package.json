@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "bitcore": "^0.11.6",
+    "blockchain-api-basic": "^0.2.3",
     "get-next": "0.0.3",
     "handlebars": "^3.0.1",
     "post-json": "^0.3.0",
