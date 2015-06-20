@@ -1,0 +1,96 @@
+%html
+  %head
+    %meta{charset: "utf-8"}/
+    %title Bitcoin Clientside Simplest Wallet
+    %meta{content: "IE=edge", "http-equiv" => "X-UA-Compatible"}/
+    %meta{content: "width=device-width, initial-scale=1", name: "viewport"}/
+    %link{href: "./css/main.css", rel: "stylesheet"}/
+
+    -# %nav.navbar.navbar-inverse.navbar-static-top
+    -#
+    -# :sass
+    -#   %nav.navbar_asd
+    -#     extend: .navbar.navbar-inverse.navbar-static-top
+    -#
+  %body
+    -# %nav.navbar_asd
+    %nav.navbar.navbar-inverse.navbar-static-top
+      .container
+        .navbar-header
+          %button.navbar-toggle.collapsed{"aria-controls" => "navbar", "aria-expanded" => "false", "data-target" => "#navbar", "data-toggle" => "collapse", type: "button"}
+            %span.sr-only  Toggle navigation
+            %span.icon-bar
+            %span.icon-bar
+            %span.icon-bar
+          %a.navbar-brand{href: "#"} Simplest Wallet
+        #navbar.collapse.navbar-collapse
+          %ul.nav.navbar-nav
+            %li.active
+              %a{href: "#"} Wallet
+            %li
+              %a{href: "#"} More...
+        / /.nav-collapse
+    / main view
+    .container
+      #app.app
+        %ul.entries.list-group
+          / only one wallet
+          <li class="list-group-item entry" data-id={ id }>
+        .panel.panel-default
+          .panel-heading
+            Address #1:
+          .row
+            .panel-body.col-xs-10.col-xs-offset-1
+              %pre { address }
+              %a{"rv-href" => "address_blockchain_url"} BC
+          .row
+            .panel-balance.panel-body.col-xs-9.col-xs-offset-1
+              Balance:
+              %strong { balance } satoshi ({ balance_btc } BTC)
+            %button.btn.btn-xs.balance_check.col-xs-1
+              check
+          .row
+            .panel-body.col-xs-10.col-xs-offset-1
+              .form-group
+                .row
+                  %label{for: "wallet_address_to"} Recipient address
+                  %input#wallet_address_to.form-control{name: "address_to", placeholder: "Enter bitcoin address", type: "text"}/
+                .row
+                  %label{for: "amount"} Amount
+                  %input#amount.form-control.col-xs-7{name: "address_to", placeholder: "Enter amount", type: "text"}/
+                  %select.form-control.col-xs-2{name: "currency_to"}
+                    %option BTC
+                    %option mBTC
+                    %option bits
+                  .col-xs-2 { amountFiat }
+              %button.btn.btn-primary.btn-send
+                Send
+              .space50
+              %div{"rv-if" => "pvtHidden"}
+                %button.btn.btn-danger.btn-xs.reveal-pvt-key
+                  Reveal Private Key
+              %div{"rv-unless" => "pvtHidden"}
+                .panel.panel-default
+                  .panel-heading
+                    Private key:
+                  #private_key.panel-body
+                    .row
+                      %label.col-xs-2 compressed:
+                      %pre.col-xs-9 { privateKey }
+                    .row
+                      %label.col-xs-2 WIF:
+                      %pre.col-xs-9 { privateKeyWIF }
+                  %div{"rv-if" => "regenerateEnabled"}
+                    %button.btn.btn-danger.btn-xs.regenerate
+                      regenerate
+                    %br/
+                    %br/
+      /
+        <button class="btn btn-primary" id="add-pvt-key">+ New Keypair</button>
+        (it will load the same wallet right now)
+      source code:
+      %a{href: "https://github.com/makevoid/simplest_wallet_bootstrap/blob/master/index.js"} makevoid/simplest_wallet_bootstrap @ github
+    / js
+    / <script charset="utf-8" type="text/javascript" src="./vendor/zepto.js"></script>
+    %script{charset: "utf-8", src: "./vendor/jquery.js", type: "text/javascript"}
+    %script{charset: "utf-8", src: "./bundle.js", type: "text/javascript"}
